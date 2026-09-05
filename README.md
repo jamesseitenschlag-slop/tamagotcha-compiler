@@ -17,22 +17,6 @@ examples/      example project (compiled to ROM by the compiler)
 CMakeLists.txt single build script for all platforms
 ```
 
-## Original firmware decompile
-
-The folder `examples/tamagotchi_p1_c` is the complete semantic 1:1 C
-reconstruction of the original P1 firmware. It compiles with
-`--match-rom` and is byte-identical to the 1996 `tama.bin`:
-
-```
-cd examples/tamagotchi_p1_c
-build.bat          # builds tamagotchi_p1.bin (6144 words, 12288 bytes)
-cmp tamagotchi_p1.bin <original tama.bin>   # identical
-```
-
-Logical parts: `00_kernel.c` .. `10_sprites_tables.c` plus `tama_types.h`.
-This is the authoritative logic reference; the `tamagotchi` emulator runs
-the produced binary 1:1.
-
 ## The C subset
 
 The target is a 4-bit machine: every value is 0..15, arithmetic is modulo 16,
