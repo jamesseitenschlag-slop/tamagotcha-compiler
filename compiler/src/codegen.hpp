@@ -61,6 +61,9 @@ int push_temp();
 void pop_temp();
 void load_a_var(const string& name, int idx);
 void store_a(Node& lhs);
+void load_a_dyn(Node& arr);   // A = arr[i], i any expr
+void store_a_dyn(Node& arr);  // A = value to store at arr[i]
+void dyn_advance(Node& arr, const string& done); // X = base, skip i cells
 // ---------- draw_text / draw_sprite ----------
 void gen_drawtext(bool hasx, int x, int y, const string& text);
 void gen_drawsprite(const string& name);

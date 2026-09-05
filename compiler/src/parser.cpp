@@ -517,9 +517,17 @@ Node Parser::parse_primary() {
             }
             if (isa("[")) {
                 next();
-                Node n(K_ARR);
+                if (peek().k == "num") {
+                    Node n(K_ARR);
+                    n.s = tk.v;
+                    n.iv = expect_num();
+                    expect("]");
+                    return n;
+                }
+                // dynamic index: a[i] (i any expression, 0..15)
+                Node n(K_ARRI);
                 n.s = tk.v;
-                n.iv = expect_num();
+                n.kids.push_back(parse_expr());
                 expect("]");
                 return n;
             }

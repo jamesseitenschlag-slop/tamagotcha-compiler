@@ -1873,6 +1873,7 @@ void Gen::gen_expr(Node& e, bool discard) {
                 break;
             case K_VAR: load_a_var(e.s, 0); break;
             case K_ARR: load_a_var(e.s, (int)e.iv); break;
+            case K_ARRI: load_a_dyn(e); break;
             case K_CALL: emit("CALL " + e.s); break;
             case K_PRINT: gen_dbgprint(e.s); break;
             case K_PRINTNUM: {
@@ -1968,6 +1969,11 @@ void Gen::gen_expr(Node& e, bool discard) {
             case K_ASSIGN: {
                 Node& lhs = e.kids[0];
                 Node& rhs = e.kids[1];
+                if (lhs.k == K_ARRI) {
+                    gen_expr(rhs);       // value in A
+                    store_a_dyn(lhs);    // arr[i] = A
+                    break;
+                }
                 // Optimierung: x = x op c -> ALU auf RAM[X] in-place
                 if (rhs.k == K_BIN && rhs.kids[1].k == K_NUM &&
                     (rhs.s == "+" || rhs.s == "-" || rhs.s == "&" ||
@@ -2346,6 +2352,44 @@ int Gen::push_temp() {
         return t;
     }
 void Gen::pop_temp() { depth--; }
+void Gen::load_a_dyn(Node& arr) {
+    // A = arr[i]; i = arr.kids[0] (0..15)
+    string top = newlbl("ai"), done = newlbl("aid");
+    gen_expr(arr.kids[0]);           // i -> A
+    emit("LD M5, A");                // counter (cell 0x005, frei)
+    emit("LD A, " + hexstr((unsigned)((var_base(arr.s) >> 8) & 0xF), 1));
+    emit("LD XP, A");
+    emit("LD X, " + hexstr((unsigned)(var_base(arr.s) & 0xFF), 2));
+    label(top);
+    emit("LD A, M5");
+    emit("CP A, 0x0");
+    emit("JP Z, " + done);
+    emit("INC X");
+    emit("DEC M5");
+    emit("JP " + top);
+    label(done);
+    emit("LD A, MX");
+}
+void Gen::store_a_dyn(Node& arr) {
+    // arr[i] = A (Aufrufer hat Wert in A), i beliebig 0..15
+    string top = newlbl("ai"), done = newlbl("aid");
+    emit("LD M6, A");                // Wert merken (cell 0x006)
+    gen_expr(arr.kids[0]);           // i -> A
+    emit("LD M5, A");
+    emit("LD A, " + hexstr((unsigned)((var_base(arr.s) >> 8) & 0xF), 1));
+    emit("LD XP, A");
+    emit("LD X, " + hexstr((unsigned)(var_base(arr.s) & 0xFF), 2));
+    label(top);
+    emit("LD A, M5");
+    emit("CP A, 0x0");
+    emit("JP Z, " + done);
+    emit("INC X");
+    emit("DEC M5");
+    emit("JP " + top);
+    label(done);
+    emit("LD A, M6");
+    emit("LD MX, A");
+}
 void Gen::load_a_var(const string& name, int idx) {
         int base = var_base(name);
         int addr = base + idx;
